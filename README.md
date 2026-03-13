@@ -70,7 +70,6 @@ An advanced, interactive Streamlit-powered dashboard designed for deep-dive reta
 
 ```text
 ├── app.py              # Main dashboard script
-├── pas/                # Modular page scripts (Executive, Sales, Customers, etc.)
 ├── data/               # Raw and cleaned datasets
 ├── assets/             # Custom CSS and static assets
 ├── notebooks/          # Exploratory Data Analysis (Jupyter Notebooks)
