@@ -1,0 +1,10 @@
+[data-testid="stAppViewContainer"] {
+    background-color: #F4F6FA;
+}
+
+[data-testid="stMetric"] {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 3px 10px rgba(0, 0, 0, 0.05);
+}
