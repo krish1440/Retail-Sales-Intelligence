@@ -1,55 +1,79 @@
+"""
+Retail Sales Intelligence & Business Analytics Dashboard
+
+This module provides an interactive Streamlit dashboard for analyzing retail sales data.
+It includes executive overviews, sales analytics, customer insights, product demand analysis,
+logistics performance, time-series forecasting (ARIMA), and market basket analysis (Apriori).
+
+Author: krish1440
+License: MIT
+"""
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from statsmodels.tsa.arima.model import ARIMA
 from mlxtend.frequent_patterns import apriori, association_rules
+from typing import Tuple
 
 # -------------------------------------------------------
-# PAGE CONFIG
+# PAGE CONFIGURATION
 # -------------------------------------------------------
 
 st.set_page_config(
     page_title="Retail Sales Intelligence Dashboard",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # -------------------------------------------------------
-# LOAD DATA
+# DATA LOADING & CACHING
 # -------------------------------------------------------
 
 @st.cache_data
-def load_data():
-    df = pd.read_csv("data/retail_sales_cleaned.csv")
-    df["Order Date"] = pd.to_datetime(df["Order Date"])
-    df["Ship Date"] = pd.to_datetime(df["Ship Date"])
-    return df
+def load_data() -> pd.DataFrame:
+    """
+    Loads and cleans the retail sales dataset.
+
+    Returns:
+        pd.DataFrame: A cleaned DataFrame containing sales records with parsed dates.
+    """
+    try:
+        df = pd.read_csv("data/retail_sales_cleaned.csv")
+        df["Order Date"] = pd.to_datetime(df["Order Date"])
+        df["Ship Date"] = pd.to_datetime(df["Ship Date"])
+        return df
+    except FileNotFoundError:
+        st.error("Data file not found. Please ensure 'data/retail_sales_cleaned.csv' exists.")
+        return pd.DataFrame()
 
 df = load_data()
 
 # -------------------------------------------------------
-# SIDEBAR FILTERS
+# SIDEBAR FILTERS & DATA SUBSETTING
 # -------------------------------------------------------
 
-st.sidebar.title("Dashboard Filters")
+st.sidebar.title("🔍 Dashboard Filters")
 
 region = st.sidebar.multiselect(
-    "Region",
+    "Select Region",
     df["Region"].unique(),
     default=df["Region"].unique()
 )
 
 category = st.sidebar.multiselect(
-    "Category",
+    "Select Category",
     df["Category"].unique(),
     default=df["Category"].unique()
 )
 
 year = st.sidebar.multiselect(
-    "Year",
+    "Select Year",
     df["Order Year"].unique(),
     default=df["Order Year"].unique()
 )
 
+# Apply filters to the main dataframe
 df = df[
     (df["Region"].isin(region)) &
     (df["Category"].isin(category)) &
@@ -60,7 +84,7 @@ df = df[
 # SIDEBAR NAVIGATION
 # -------------------------------------------------------
 
-st.sidebar.title("Dashboard Navigation")
+st.sidebar.title("📂 Dashboard Navigation")
 
 page = st.sidebar.radio(
     "Go to",
@@ -76,34 +100,34 @@ page = st.sidebar.radio(
 )
 
 # -------------------------------------------------------
-# TITLE
+# MAIN TITLE
 # -------------------------------------------------------
 
-st.title("Retail Sales Intelligence Dashboard")
+st.title("🚀 Retail Sales Intelligence Dashboard")
+st.markdown("---")
 
 # -------------------------------------------------------
-# EXECUTIVE OVERVIEW
+# EXECUTIVE OVERVIEW PAGE
 # -------------------------------------------------------
 
 if page == "Executive Overview":
+    st.header("📊 Executive Overview")
 
-    st.header("Executive Overview")
-
+    # High-level KPIs
     total_sales = df["Sales"].sum()
     total_orders = df["Order ID"].nunique()
     total_customers = df["Customer Name"].nunique()
     avg_order = df["Sales"].mean()
 
     col1, col2, col3, col4 = st.columns(4)
-
     col1.metric("Total Sales", f"${total_sales:,.0f}")
     col2.metric("Total Orders", total_orders)
     col3.metric("Customers", total_customers)
     col4.metric("Avg Order Value", f"${avg_order:,.2f}")
 
-    st.markdown("### 📊 Executive Insights")
+    st.markdown("### 👁️ Executive Insights")
     
-    # Pareto Analysis Calculation
+    # Pareto Analysis: Identifying the 'Vital Few'
     sales_sorted = df.sort_values(by='Sales', ascending=False)
     sales_sorted['Cumulative Sales'] = sales_sorted['Sales'].cumsum()
     total_sales_sum = sales_sorted['Sales'].sum()
@@ -133,6 +157,7 @@ if page == "Executive Overview":
     col_trend, col_pareto = st.columns(2)
 
     with col_trend:
+        # Time-series analysis of sales
         sales_trend = df.groupby("Order Date")["Sales"].sum().reset_index()
         fig = px.line(
             sales_trend,
@@ -144,6 +169,7 @@ if page == "Executive Overview":
         st.plotly_chart(fig, use_container_width=True)
 
     with col_pareto:
+        # Concentration analysis visualization
         fig_pareto = px.area(
             sales_sorted.reset_index(),
             y="Cumulative %",
@@ -155,17 +181,16 @@ if page == "Executive Overview":
         st.plotly_chart(fig_pareto, use_container_width=True)
 
 # -------------------------------------------------------
-# SALES ANALYTICS
+# SALES ANALYTICS PAGE
 # -------------------------------------------------------
 
 elif page == "Sales Analytics":
-
-    st.header("Sales Analytics")
+    st.header("📈 Sales Analytics")
 
     col1, col2 = st.columns(2)
 
+    # Dimensional Sales Breakdown
     category_sales = df.groupby("Category")["Sales"].sum().reset_index()
-
     fig1 = px.bar(
         category_sales,
         x="Category",
@@ -173,11 +198,9 @@ elif page == "Sales Analytics":
         color="Category",
         title="Sales by Category"
     )
-
     col1.plotly_chart(fig1, use_container_width=True)
 
     region_sales = df.groupby("Region")["Sales"].sum().reset_index()
-
     fig2 = px.bar(
         region_sales,
         x="Region",
@@ -186,14 +209,14 @@ elif page == "Sales Analytics":
         title="Sales by Region",
         template="plotly_dark"
     )
-
     col2.plotly_chart(fig2, use_container_width=True)
 
-    st.markdown("### 📈 Deep Dive: Sales Distribution & High Value Orders")
+    st.markdown("### 📊 Deep Dive: Sales Distribution & High Value Orders")
     
     div_col1, div_col2 = st.columns([2, 1])
     
     with div_col1:
+        # Histogram showing the long-tail nature of retail sales
         fig_dist = px.histogram(
             df, 
             x="Sales", 
@@ -210,6 +233,7 @@ elif page == "Sales Analytics":
         """)
 
     with div_col2:
+        # Identifying top revenue generators
         st.subheader("Top 10 High Value Orders")
         high_val = df.sort_values(by="Sales", ascending=False).head(10)[["Order ID", "Customer Name", "Sales"]]
         st.dataframe(high_val, use_container_width=True)
@@ -218,13 +242,13 @@ elif page == "Sales Analytics":
         """)
 
 # -------------------------------------------------------
-# CUSTOMER ANALYTICS
+# CUSTOMER ANALYTICS PAGE
 # -------------------------------------------------------
 
 elif page == "Customer Analytics":
+    st.header("👥 Customer Analytics")
 
-    st.header("Customer Analytics")
-
+    # Identifying major customers
     top_customers = (
         df.groupby("Customer Name")["Sales"]
         .sum()
@@ -237,25 +261,24 @@ elif page == "Customer Analytics":
         top_customers,
         x="Customer Name",
         y="Sales",
-        title="Top Customers"
+        title="Top 10 Customers by Revenue"
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### 👥 Customer Behavior Insight")
+    st.markdown("### 💡 Customer Behavior Insight")
     st.write(f"""
     **Value Concentration:** The top customers like **{top_customers.iloc[0]['Customer Name']}** are primary revenue contributors. 
     Focusing on VIP loyalty programs for high-value clients can significantly reduce customer acquisition costs (CAC).
     """)
 
 # -------------------------------------------------------
-# PRODUCT INSIGHTS
+# PRODUCT INSIGHTS PAGE
 # -------------------------------------------------------
 
 elif page == "Product Insights":
+    st.header("📦 Product Insights")
 
-    st.header("Product Insights")
-
+    # Sub-category demand analysis
     sub_sales = df.groupby("Sub-Category")["Sales"].sum().reset_index()
     sub_sales = sub_sales.sort_values("Sales", ascending=False)
 
@@ -263,39 +286,37 @@ elif page == "Product Insights":
         sub_sales,
         x="Sub-Category",
         y="Sales",
-        title="Product Demand",
+        title="Product Demand by Sub-Category",
         template="plotly_dark"
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### 📦 Inventory & Demand Strategy")
+    st.markdown("### 🏷️ Inventory & Demand Strategy")
     st.info(f"""
     **Performance analysis:** {sub_sales.iloc[0]['Sub-Category']} is the highest demand sub-category. 
     **Recommendation:** Align purchasing cycles with these volume trends to minimize holding costs and optimize warehouse space.
     """)
 
 # -------------------------------------------------------
-# OPERATIONS
+# OPERATIONS PAGE
 # -------------------------------------------------------
 
 elif page == "Operations":
+    st.header("🚚 Shipping Performance")
 
-    st.header("Shipping Performance")
-
+    # Average delay analysis per shipping method
     ship_delay = df.groupby("Ship Mode")["Shipping Delay"].mean().reset_index()
 
     fig = px.bar(
         ship_delay,
         x="Ship Mode",
         y="Shipping Delay",
-        title="Average Shipping Delay",
+        title="Average Shipping Delay by Mode (Days)",
         template="plotly_dark"
     )
-
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### 🚚 Logisitics Insight")
+    st.markdown("### ⛓️ Logistics Insight")
     mean_delay = df['Shipping Delay'].mean()
     st.success(f"""
     **Efficiency Check:** The overall average shipping delay is **{mean_delay:.1f} days**. 
@@ -304,47 +325,51 @@ elif page == "Operations":
     """)
 
 # -------------------------------------------------------
-# FORECASTING
+# FORECASTING PAGE
 # -------------------------------------------------------
 
 elif page == "Forecasting":
+    st.header("🔮 Sales Forecast")
 
-    st.header("Sales Forecast")
-
+    # Aggregating sales for time-series forecasting
     ts = df.groupby("Order Date")["Sales"].sum()
 
-    model = ARIMA(ts, order=(1,1,1))
-    fit = model.fit()
+    # ARIMA Model Implementation: (p,d,q) parameters
+    # Note: Simple (1,1,1) model for demonstration; real-world apps might need hyperparameter tuning.
+    try:
+        model = ARIMA(ts, order=(1,1,1))
+        fit = model.fit()
+        forecast = fit.forecast(steps=12)
 
-    forecast = fit.forecast(steps=12)
+        forecast_df = forecast.reset_index()
+        forecast_df.columns = ["Date","Forecast"]
 
-    forecast_df = forecast.reset_index()
-    forecast_df.columns = ["Date","Forecast"]
+        fig = px.line(
+            forecast_df,
+            x="Date",
+            y="Forecast",
+            title="Statistical Sales Forecast (Next 12 Periods)",
+            template="plotly_dark"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"Forecasting model error: {e}")
 
-    fig = px.line(
-        forecast_df,
-        x="Date",
-        y="Forecast",
-        title="Next 12 Months Forecast",
-        template="plotly_dark"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("### 🔮 Predictive Commentary")
+    st.markdown("### 🧠 Predictive Commentary")
     st.warning("""
-    **Forecasting Note:** This model uses the ARIMA algorithm. The projected trend helps in capacity planning. 
-    Sudden external market changes or supply chain disruptions may require model re-calibration for better accuracy.
+    **Forecasting Note:** This model uses the ARIMA (AutoRegressive Integrated Moving Average) algorithm. 
+    The projected trend helps in capacity planning. Sudden external market changes or supply chain 
+    disruptions may require model re-calibration for better accuracy.
     """)
 
 # -------------------------------------------------------
-# PRODUCT ASSOCIATIONS
+# PRODUCT ASSOCIATIONS PAGE
 # -------------------------------------------------------
 
 elif page == "Product Associations":
+    st.header("🛒 Product Association Analysis")
 
-    st.header("Product Association Analysis")
-
+    # Data transformation for Market Basket Analysis
     basket = (
         df.groupby(["Order ID","Sub-Category"])["Sales"]
         .sum()
@@ -352,14 +377,17 @@ elif page == "Product Associations":
         .fillna(0)
     )
 
+    # Boolean encoding for Apriori algorithm
     basket = basket.applymap(lambda x: True if x > 0 else False)
 
+    # Apriori: Identifying frequent itemsets
     frequent_itemsets = apriori(
         basket,
         min_support=0.02,
         use_colnames=True
     )
 
+    # Association Rules: Lift, Confidence, Support
     rules = association_rules(
         frequent_itemsets,
         metric="lift",
@@ -368,7 +396,7 @@ elif page == "Product Associations":
 
     rules = rules.sort_values("lift", ascending=False)
 
-    # SEC FIX: Clean frozenset for display
+    # UI Fix: Clean frozenset for readable display
     rules_display = rules.copy()
     rules_display["antecedents"] = rules_display["antecedents"].apply(lambda x: ', '.join(list(x)))
     rules_display["consequents"] = rules_display["consequents"].apply(lambda x: ', '.join(list(x)))
@@ -378,14 +406,14 @@ elif page == "Product Associations":
         use_container_width=True
     )
 
-    st.markdown("### 💡 Association Insights")
+    st.markdown("### 🛡️ Association Strategy")
     st.write("""
     - **Lift > 1.0**: Indicates that the items are more likely to be bought together than independently. The higher the lift, the stronger the association.
     - **Confidence**: The probability that the second item is bought when the first one is.
     - **Strategy**: Use these associations for cross-selling (e.g., placing frequently bought items near each other or recommending them during checkout).
     """)
 
-    # Conversion for visualization
+    # Visualizing rule strength
     rules_viz = rules.head(10).copy()
     rules_viz["antecedents"] = rules_viz["antecedents"].apply(lambda x: ', '.join(list(x)))
     rules_viz["consequents"] = rules_viz["consequents"].apply(lambda x: ', '.join(list(x)))
@@ -397,7 +425,7 @@ elif page == "Product Associations":
         size="lift",
         color="lift",
         hover_data=["antecedents","consequents"],
-        title="Product Association Strength (Lift Analysis)",
+        title="Association Strength Analysis (Support vs Confidence)",
         template="plotly_dark"
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)

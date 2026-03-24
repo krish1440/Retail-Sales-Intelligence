@@ -8,6 +8,14 @@ An advanced, interactive Streamlit-powered dashboard designed for deep-dive reta
 
 ---
 
+## 📊 Data Source
+
+The analysis is based on the **Global Superstore Sales** dataset.
+- **Dataset Link:** [Kaggle - Sales Forecasting Dataset](https://www.kaggle.com/datasets/rohitsahoo/sales-forecasting)
+- **Content:** Historical sales data including orders, returns, and customer information across various regions and categories.
+
+---
+
 ## 🌟 Key Features
 
 ### 📈 Executive Business Intelligence
@@ -66,21 +74,26 @@ An advanced, interactive Streamlit-powered dashboard designed for deep-dive reta
 
 ---
 
-## 📊 Project Structure
+## 📂 Project Structure
 
 ```text
 ├── app.py              # Main dashboard script
 ├── data/               # Raw and cleaned datasets
 ├── assets/             # Custom CSS and static assets
 ├── notebooks/          # Exploratory Data Analysis (Jupyter Notebooks)
-└── .streamlit/         # Theme configurations
+└── .streamlit/         # Theme configurations (Custom CSS, Layout)
 ```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request for any enhancements.
+Contributions are welcome! If you have suggestions for new features or analytics modules, feel free to:
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
