@@ -84,4 +84,3 @@ Contributions are welcome! Feel free to open an issue or submit a pull request f
 
 ---
 
-**Developed with ❤️ for Retail Data Excellence.**
